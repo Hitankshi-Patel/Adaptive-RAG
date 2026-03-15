@@ -10,3 +10,11 @@ venv.bak/
 # Project specifics
 .mock_backend.py.swp
 *.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Backend data
+backend/data/

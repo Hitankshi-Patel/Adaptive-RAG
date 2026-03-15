@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+langchain
+langchain-openai
+langchain-google-genai
+langchain-anthropic
+langchain-community
+langgraph
+faiss-cpu
+pypdf
+tavily-python
+python-dotenv
+sentence-transformers
+langchain-text-splitters
+

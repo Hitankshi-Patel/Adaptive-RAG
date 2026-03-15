@@ -1,6 +1,23 @@
-# Adaptive-RAG AI Assistant Frontend
+# Adaptive-RAG AI System
 
-A modern, professional frontend for the Adaptive-RAG system built with Streamlit. It demonstrates a Query-Aware Retrieval-Augmented Generation system.
+A full-stack **Adaptive Retrieval-Augmented Generation** system that dynamically selects the best answering strategy based on query complexity. Built with Streamlit, FastAPI, and LangGraph.
+
+## Architecture
+
+```
+Streamlit UI  →  FastAPI Backend  →  LangGraph Orchestration
+                                            ↓
+                                     Query Analysis
+                                            ↓
+                                   Query Classification
+                                            ↓
+                                     Strategy Router
+                                   ┌────────┼────────┐
+                              Retriever   Web Search   Direct LLM
+                                   └────────┼────────┘
+                                            ↓
+                                   Response Generator
+```
 
 ## Project Structure
 
@@ -8,58 +25,128 @@ A modern, professional frontend for the Adaptive-RAG system built with Streamlit
 Adaptive-RAG/
 │
 ├── frontend/
-│   ├── app.py              # Main Streamlit application
-│   └── requirements.txt    # Python dependencies
+│   ├── app.py                         # Streamlit application
+│   └── requirements.txt
+│
 ├── backend/
-│   └── mock_backend.py     # Example FastAPI backend for real API testing
-└── README.md               # Instructions and documentation
+│   ├── main.py                        # FastAPI entry point
+│   ├── requirements.txt
+│   ├── api/
+│   │   └── rag_routes.py              # REST endpoints
+│   ├── schemas/
+│   │   └── request_models.py          # Pydantic models
+│   ├── analysis/
+│   │   ├── query_analysis.py          # Query Analysis module
+│   │   └── query_classification.py    # Query Classification engine
+│   ├── prompts/
+│   │   └── query_analysis_prompt.py   # LLM prompt templates
+│   ├── pipelines/
+│   │   ├── model_loader.py            # Multi-LLM loader (GPT/Gemini/Claude)
+│   │   └── langgraph_pipeline.py      # 7-node LangGraph orchestration
+│   ├── services/
+│   │   ├── rag_service.py             # Query processing service
+│   │   └── document_service.py        # Document upload service
+│   ├── vectorstore/
+│   │   └── vector_db.py               # FAISS vector store manager
+│   └── utils/
+│       ├── text_processing.py         # PDF/TXT extraction & chunking
+│       └── llm_helpers.py             # Structured output parsing
+│
+└── README.md
 ```
 
 ## Setup Instructions
 
 ### 1. Prerequisites
-Ensure you have Python 3.8+ installed.
 
-### 2. Install Dependencies
-Open your terminal and navigate to the frontend directory:
+- Python 3.10+
+- API keys for one or more LLM providers
+
+### 2. Environment Variables
+
+Create a `.env` file inside the `backend/` directory:
+
+```env
+OPENAI_API_KEY=your-openai-key
+GOOGLE_API_KEY=your-google-key
+ANTHROPIC_API_KEY=your-anthropic-key
+TAVILY_API_KEY=your-tavily-key
+```
+
+> You only need the key(s) for the model(s) you plan to use.
+
+### 3. Install Backend Dependencies
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+### 4. Install Frontend Dependencies
+
 ```bash
 cd frontend
 pip install -r requirements.txt
 ```
 
-*(Optional) If you want to run the example API backend, install fastapi and uvicorn:*
+### 5. Run the Backend
+
 ```bash
-pip install fastapi uvicorn
+cd backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 3. Run the Streamlit Application
-Start the frontend by running (from the frontend directory):
+The API will be available at `http://localhost:8000`. Open `http://localhost:8000/docs` for the interactive Swagger UI.
+
+### 6. Run the Frontend
+
+In a separate terminal:
+
 ```bash
+cd frontend
 streamlit run app.py
 ```
-This will open the interface in your default web browser (usually http://localhost:8501). 
 
-By default, the UI runs in a "Mock Mode" which simulates the delay and response of the API without needing the backend to actually be running.
+The UI will be available at `http://localhost:8501`.
 
-### 4. Running the Example Backend API (Optional)
-If you want to test the real `requests.post()` API integration:
+### 7. Connect Frontend to Backend
 
-1. Open a **second terminal**, navigate to the backend directory, and run:
-   ```bash
-   cd backend
-   python mock_backend.py
-   ```
-2. In the Streamlit UI, open the **⚙️ Settings** expander in the bottom of the sidebar.
-3. Turn **OFF** the "Use Mock Backend" toggle.
-4. Now, any queries you ask will be routed through HTTP POST to `http://localhost:8000/ask`.
+In the Streamlit sidebar, open **⚙️ Settings** and turn **OFF** the "Use Mock Backend" toggle. Select your preferred LLM model from the dropdown in the chat area.
 
-## Features Included
+## API Endpoints
 
-- **Modern UI Styling**: Incorporates CSS for a beautiful, robust data visualization styling (Rounded cards, soft shadows)
-- **Chat Interface**: Retains state with `st.session_state` and uses native Streamlit chat UI components.
-- **Loading Indicators**: Uses step-by-step artificial delays displaying "Analyzing query...", "Retrieving documents...", etc.
-- **Analysis View Component**: Displays dynamic classification data seamlessly using colored highlight chips.
-- **Pipeline Visualizer**: Provides an architectural understanding flow map of the data parsing algorithm directly on the dashboard.
-- **Streaming Responses (Bonus)**: Uses `st.write_stream` generator to yield word tokens smoothly mimicking OpenAI's ChatGPT.
-- **Expandable Document Viewers**: Uses `st.expander` to compress heavily retrieved text blocks for readability.
-- **Mock/Real Interoperable Modes**: Allows graceful testing without setting up full infra.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/health` | GET | Service health check |
+| `/rag/query` | POST | Submit a query to the Adaptive-RAG pipeline |
+| `/rag/documents/upload` | POST | Upload a PDF/TXT file for indexing |
+
+### Example — Query
+
+```bash
+curl -X POST http://localhost:8000/rag/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is Adaptive RAG?", "model": "gpt"}'
+```
+
+### Example — Document Upload
+
+```bash
+curl -X POST http://localhost:8000/rag/documents/upload \
+  -F "file=@research_paper.pdf"
+```
+
+### Example — Health Check
+
+```bash
+curl http://localhost:8000/health
+```
+
+## Features
+
+- **Multi-LLM Support** — GPT (OpenAI), Gemini (Google), Claude (Anthropic)
+- **Adaptive Routing** — LangGraph dynamically routes queries through analysis → classification → optimal pipeline
+- **Three Pipelines** — Document Retriever (FAISS), Web Search (Tavily), Direct LLM
+- **Document Indexing** — Upload PDF/TXT files for vector-based retrieval
+- **Modern UI** — Streamlit chat interface with streaming responses, pipeline visualization, and analysis dashboard
+- **Mock Mode** — Test the UI without a running backend
